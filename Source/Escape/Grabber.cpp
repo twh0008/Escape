@@ -11,7 +11,6 @@ UGrabber::UGrabber()
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
 
-	// ...
 }
 
 
@@ -20,42 +19,69 @@ void UGrabber::BeginPlay()
 {
 	Super::BeginPlay();
 
-	UE_LOG(LogTemp, Warning, TEXT("Grabber Reporting"));
+	FindPhysicsHandleComponent();
+	SetupInputComponent();
+	
 
-	///Look for attached Physics Handle
-	PhysicsHandle = GetOwner()->FindComponentByClass<UPhysicsHandleComponent>();
-	Input = GetOwner()->FindComponentByClass<UInputComponent>();
+}
 
-
-
-	if (PhysicsHandle) {
-
-		//physics handle found
-	} else {
-
-		UE_LOG(LogTemp, Warning, TEXT("%s is missing Handler"), *GetOwner()->GetName());
-	}
-
-	if (Input) {
-
+void UGrabber::SetupInputComponent() {
+	InputComponent = GetOwner()->FindComponentByClass<UInputComponent>();
+	if (InputComponent) {
 		UE_LOG(LogTemp, Warning, TEXT("%s contains Input"), *GetOwner()->GetName());
-
 		//bind input axis
-		Input->BindAction("Grab", IE_Pressed, this, &UGrabber::Grab);
-
+		InputComponent->BindAction("Grab", IE_Pressed, this, &UGrabber::Grab);
+		InputComponent->BindAction("Grab", IE_Released, this, &UGrabber::Release);
 	}
 	else {
 		UE_LOG(LogTemp, Warning, TEXT("%s is missing Input"), *GetOwner()->GetName());
 	}
+}
 
-	
-	
+
+
+void UGrabber::FindPhysicsHandleComponent() {
+	PhysicsHandle = GetOwner()->FindComponentByClass<UPhysicsHandleComponent>();
+
+	if (PhysicsHandle) {
+
+		//physics handle found
+	}
+	else {
+
+		UE_LOG(LogTemp, Warning, TEXT("%s is missing Handler"), *GetOwner()->GetName());
+	}
 }
 
 void UGrabber::Grab() {
 	UE_LOG(LogTemp, Warning, TEXT("Grab is pressed"));
 
+	///LINE TRACE and Try and reach any actors with physics body collision channel
+	
+	auto HitResult = GetFirstPhysicsBodyInReach();
+	auto ComponentToGrab = HitResult.GetComponent();
+	auto ActorHit = HitResult.GetActor();
+
+	if (ActorHit) {
+		PhysicsHandle->GrabComponent(ComponentToGrab,
+			NAME_None,
+			ComponentToGrab->GetOwner()->GetActorLocation(),
+			true);
+	}
+	///If we hit something, attach physics handle
+	//TODO attach physics
+
 }
+
+void UGrabber::Release() {
+	UE_LOG(LogTemp, Warning, TEXT("Grab is released"));
+
+	PhysicsHandle->ReleaseComponent();
+
+	//TODO release physics
+
+}
+
 
 
 // Called every frame
@@ -63,46 +89,41 @@ void UGrabber::TickComponent(float DeltaTime, ELevelTick TickType, FActorCompone
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	// Get Player view point
-
 	FVector PlayerViewPointLocation;
 	FRotator PlayerViewPointRotation;
 
 	GetWorld()->GetFirstPlayerController()->GetPlayerViewPoint(
-		OUT PlayerViewPointLocation, 
+		OUT PlayerViewPointLocation,
 		OUT PlayerViewPointRotation
 	);
 
+	FVector LineTraceEnd = PlayerViewPointLocation + PlayerViewPointRotation.Vector() * Reach;
 
+	// if physics handle is attached, move object that is held
 
+	if (PhysicsHandle->GrabbedComponent) {
 
-	
+		PhysicsHandle->SetTargetLocation(LineTraceEnd);
 
-	/*UE_LOG(LogTemp, Warning, TEXT("Location: %s, Position: %s"), 
-		*PlayerViewPointLocation.ToString(), 
-		*PlayerViewPointRotation.ToString()
-	);*/
+	}
+
+}
+
+const FHitResult UGrabber::GetFirstPhysicsBodyInReach()
+{
+	// Get Player view point
+	FVector PlayerViewPointLocation;
+	FRotator PlayerViewPointRotation;
+
+	GetWorld()->GetFirstPlayerController()->GetPlayerViewPoint(
+		OUT PlayerViewPointLocation,
+		OUT PlayerViewPointRotation
+	);
 
 	FVector LineTraceEnd = PlayerViewPointLocation + PlayerViewPointRotation.Vector() * Reach;
 
-
-
-	// Draw a red trace in the world
-
-	/*DrawDebugLine(GetWorld(),
-		PlayerViewPointLocation,
-		LineTraceEnd,
-		FColor(255, 0, 0),
-		false,
-		0.f,
-		0.f,
-		10.0f
-		);*/
-
-
 	//Setup Query
 	FCollisionQueryParams TraceParams(FName(TEXT("")), false, GetOwner());
-
 
 	//Ray-cast out to reach distance
 	FHitResult Hit;
@@ -114,19 +135,12 @@ void UGrabber::TickComponent(float DeltaTime, ELevelTick TickType, FActorCompone
 		TraceParams
 	);
 
-
-
-	//see what is hit
-
-
-
 	AActor* ActorHit = Hit.GetActor();
 	if (ActorHit)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Hitting Object: %s"), *ActorHit->GetName());
 	}
 
-	
-
+	return Hit;
 }
 
