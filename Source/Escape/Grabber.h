@@ -26,7 +26,7 @@ public:
 	// How far ahead of the player can we reach
 
 private:
-	float Reach = 100.0f;
+	float Reach = 120.0f;
 
 	UPhysicsHandleComponent* PhysicsHandle = nullptr;
 	UInputComponent* InputComponent = nullptr;
@@ -48,5 +48,7 @@ private:
 
 	//Returns current end of reach line
 	FVector GetReachLineEnd();
+
+
 
 };

@@ -42,7 +42,6 @@ void UGrabber::FindPhysicsHandleComponent() {
 
 	if (PhysicsHandle == nullptr) {
 		UE_LOG(LogTemp, Warning, TEXT("%s is missing Handler"), *GetOwner()->GetName());
-		//physics handle found
 	}
 }
 
@@ -50,7 +49,7 @@ void UGrabber::Grab() {
 	
 	///LINE TRACE and Try and reach any actors with physics body collision channel
 	auto HitResult = GetFirstPhysicsBodyInReach();
-	auto ComponentToGrab = HitResult.GetComponent();
+	auto ComponentToGrab = HitResult.GetComponent(); //gets mesh component
 	auto ActorHit = HitResult.GetActor();
 	///If we hit something, attach physics handle
 	if (ActorHit) {
@@ -59,9 +58,6 @@ void UGrabber::Grab() {
 			ComponentToGrab->GetOwner()->GetActorLocation(),
 			true); //allow rotation
 	}
-
-	
-
 }
 
 void UGrabber::Release() {
@@ -88,7 +84,6 @@ const FHitResult UGrabber::GetFirstPhysicsBodyInReach()
 	
 	//Setup Query
 	FCollisionQueryParams TraceParams(FName(TEXT("")), false, GetOwner());
-
 	//Ray-cast out to reach distance
 	FHitResult HitResult;
 	GetWorld()->LineTraceSingleByObjectType(

@@ -39,6 +39,8 @@ private:
 		AActor* ActorThatOpens;
 		AActor* Owner; //The owning door
 
+		float GetTotalMass();
+
 
 
 		
